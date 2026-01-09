@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     gmail_client_id: str = Field(..., env="GMAIL_CLIENT_ID")
     gmail_client_secret: str = Field(..., env="GMAIL_CLIENT_SECRET")
     gmail_refresh_token: str = Field(..., env="GMAIL_REFRESH_TOKEN")
-    gmail_label: str = Field(default="Lambeth Cyclists", env="GMAIL_LABEL")
+    gmail_label: str = Field(default="Lambeth Cycling Projects", env="GMAIL_LABEL")
 
     # Claude API
     claude_api_key: str = Field(..., env="CLAUDE_API_KEY")
