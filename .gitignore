@@ -53,6 +53,7 @@ temp/
 # Google OAuth credentials
 token.json
 credentials.json
+get_refresh_token_output.txt
 
 # Misc
 .DS_Store
