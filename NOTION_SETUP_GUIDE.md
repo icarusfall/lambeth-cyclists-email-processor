@@ -124,7 +124,7 @@ Add the following properties (exact names matter - they're case-sensitive):
 - `Primary Locations` - Multi-select
   - Copy common locations from Items database
 - `Geographic Scope` - Select
-  - Options: single_street, neighborhood, borough_wide, cross_borough
+  - Options: single_street, neighbourhood, borough_wide, cross_borough
 
 **Links:**
 - `Project Folder` - URL

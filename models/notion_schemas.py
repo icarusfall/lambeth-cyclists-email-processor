@@ -81,7 +81,7 @@ class NotionProjectCreate(BaseModel):
 
     # Locations
     primary_locations: List[str] = Field(default_factory=list)
-    geographic_scope: Optional[str] = None  # single_street, neighborhood, borough_wide, cross_borough
+    geographic_scope: Optional[str] = None  # single_street, neighbourhood, borough_wide, cross_borough
 
     # Links
     project_folder: Optional[str] = None
