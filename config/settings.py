@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     gmail_qpm: int = Field(default=250, env="GMAIL_QPM")
     notion_rpm: int = Field(default=3, env="NOTION_RPM")
 
+    # Email Alerts Configuration (optional)
+    smtp_host: str = Field(default="smtp.gmail.com", env="SMTP_HOST")
+    smtp_port: int = Field(default=587, env="SMTP_PORT")
+    smtp_username: Optional[str] = Field(default=None, env="SMTP_USERNAME")
+    smtp_password: Optional[str] = Field(default=None, env="SMTP_PASSWORD")
+    alert_email: Optional[str] = Field(default=None, env="ALERT_EMAIL")
+
     # Error Monitoring (optional)
     sentry_dsn: Optional[str] = Field(default=None, env="SENTRY_DSN")
 
@@ -123,7 +130,7 @@ def validate_settings() -> None:
 GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.modify",
-    "https://www.googleapis.com/auth/drive.file"
+    "https://www.googleapis.com/auth/drive"  # Full Drive access for folder access
 ]
 
 GMAIL_PROCESSED_LABEL = "processed"

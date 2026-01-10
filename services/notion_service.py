@@ -140,14 +140,18 @@ class NotionService:
         """Parse Notion API response into NotionItem."""
         props = response["properties"]
 
+        # Get values with defaults for required fields
+        summary = self._get_rich_text(props.get("Summary")) or "No summary"
+        date_received = self._get_date(props.get("Date Received")) or datetime.now(timezone.utc)
+
         return NotionItem(
             notion_id=response["id"],
             created_time=datetime.fromisoformat(response["created_time"].replace('Z', '+00:00')),
             last_edited_time=datetime.fromisoformat(response["last_edited_time"].replace('Z', '+00:00')),
             url=response["url"],
             title=self._get_title(props.get("Title")),
-            summary=self._get_rich_text(props.get("Summary")),
-            date_received=self._get_date(props.get("Date Received")),
+            summary=summary,
+            date_received=date_received,
             gmail_message_id=self._get_rich_text(props.get("Gmail Message ID")),
             sender_email=self._get_email(props.get("Sender Email")),
             has_attachments=self._get_checkbox(props.get("Has Attachments")),
@@ -405,8 +409,12 @@ class NotionService:
         }
 
         # Optional fields
+        if meeting_data.meeting_format:
+            properties["Meeting Format"] = {"select": {"name": meeting_data.meeting_format}}
         if meeting_data.location:
             properties["Location"] = {"rich_text": [{"text": {"content": meeting_data.location}}]}
+        if meeting_data.zoom_link:
+            properties["Zoom Link"] = {"url": meeting_data.zoom_link}
         if meeting_data.auto_generated_agenda:
             properties["Auto-Generated Agenda"] = {"rich_text": [{"text": {"content": meeting_data.auto_generated_agenda[:2000]}}]}
         if meeting_data.manual_agenda_items:
@@ -438,7 +446,9 @@ class NotionService:
             meeting_title=self._get_title(props.get("Meeting Title")),
             meeting_date=self._get_date(props.get("Meeting Date")) or datetime.now(timezone.utc),
             meeting_type=self._get_select(props.get("Meeting Type")) or "regular_committee",
+            meeting_format=self._get_select(props.get("Meeting Format")),
             location=self._get_rich_text(props.get("Location")),
+            zoom_link=self._get_url(props.get("Zoom Link")),
             auto_generated_agenda=self._get_rich_text(props.get("Auto-Generated Agenda")),
             manual_agenda_items=self._get_rich_text(props.get("Manual Agenda Items")),
             agenda_generation_status=self._get_select(props.get("Agenda Generation Status")) or "pending",

@@ -34,7 +34,7 @@ class EmailData(BaseModel):
     subject: str = Field(..., description="Email subject line")
     sender_email: EmailStr = Field(..., description="Sender email address")
     sender_name: Optional[str] = Field(default=None, description="Sender display name")
-    recipient_emails: List[EmailStr] = Field(default_factory=list, description="Recipient email addresses")
+    recipient_emails: List[str] = Field(default_factory=list, description="Recipient email addresses (pre-validated)")
     date_received: datetime = Field(..., description="When email was received")
 
     # Email content

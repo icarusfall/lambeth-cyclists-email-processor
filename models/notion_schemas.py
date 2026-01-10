@@ -103,7 +103,9 @@ class NotionMeetingCreate(BaseModel):
 
     # Meeting metadata
     meeting_type: str = "regular_committee"  # regular_committee, emergency, planning, special
+    meeting_format: Optional[str] = None  # Hybrid, Online Only, In-person
     location: Optional[str] = None
+    zoom_link: Optional[str] = None
 
     # Attendees (Person properties - emails or IDs)
     attendees: List[str] = Field(default_factory=list)

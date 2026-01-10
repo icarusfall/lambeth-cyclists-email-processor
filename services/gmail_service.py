@@ -210,7 +210,9 @@ class GmailService:
                 email = recipient.split('<')[1].split('>')[0].strip()
             else:
                 email = recipient.strip()
-            if email:
+
+            # Filter out invalid emails (must have @)
+            if email and '@' in email and ':' not in email and ';' not in email:
                 recipients.append(email)
 
         return recipients
