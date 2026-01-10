@@ -11,10 +11,9 @@ from typing import Optional
 
 from config.settings import get_settings, validate_settings
 from config.logging_config import setup_logging, get_logger
-
-# Will be imported in later phases
-# from processors.email_processor import EmailProcessor
-# from agenda.meeting_detector import MeetingDetector
+from processors.email_processor import EmailProcessor
+from agenda.meeting_detector import MeetingDetector
+from agenda.meeting_reminder import MeetingReminder
 
 
 logger = get_logger(__name__)
@@ -30,9 +29,12 @@ class Application:
         self.email_task: Optional[asyncio.Task] = None
         self.meeting_task: Optional[asyncio.Task] = None
 
-        # Will be initialized in later phases
-        # self.email_processor = EmailProcessor()
-        # self.meeting_detector = MeetingDetector()
+        # Initialize email processor
+        self.email_processor = EmailProcessor()
+
+        # Initialize meeting detector and reminder system
+        self.meeting_detector = MeetingDetector()
+        self.meeting_reminder = MeetingReminder()
 
     async def email_polling_loop(self):
         """
@@ -45,8 +47,10 @@ class Application:
             try:
                 logger.debug("Polling Gmail for new emails...")
 
-                # Placeholder - will be implemented in Phase 7
-                # await self.email_processor.process_new_emails()
+                # Process new emails
+                logger.debug("About to call process_new_emails()")
+                await self.email_processor.process_new_emails()
+                logger.debug("Returned from process_new_emails()")
 
                 logger.info("Email polling cycle complete")
 
@@ -65,10 +69,13 @@ class Application:
 
         while self.running:
             try:
-                logger.debug("Checking for meetings needing agendas...")
+                logger.debug("Checking for meetings needing agendas and sending reminders...")
 
-                # Placeholder - will be implemented in Phase 8
-                # await self.meeting_detector.check_and_generate()
+                # Check for meetings and generate agendas
+                await self.meeting_detector.check_and_generate()
+
+                # Check for meetings needing reminders
+                await self.meeting_reminder.check_and_send_reminders()
 
                 logger.info("Meeting agenda cycle complete")
 
