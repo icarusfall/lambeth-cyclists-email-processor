@@ -44,40 +44,37 @@ class AgendaGenerator:
         logger.info(f"Generating agenda for meeting: {meeting.meeting_title}")
 
         try:
-            # Get the previous meeting to determine "since last meeting"
-            previous_meeting = self._get_previous_meeting(meeting.meeting_date)
-
             # Gather relevant items and projects
-            new_items = self._get_new_items(previous_meeting)
+            recent_items = self._get_recent_items(limit=5)
             deadline_items = self._get_items_with_approaching_deadlines(days=30)
-            active_projects = self._get_active_projects()
+            ongoing_projects = self._get_active_projects()
 
             logger.info(
-                f"Found {len(new_items)} new items, {len(deadline_items)} deadline items, "
-                f"{len(active_projects)} active projects"
+                f"Found {len(recent_items)} recent items, {len(deadline_items)} deadline items, "
+                f"{len(ongoing_projects)} ongoing projects"
             )
 
             # Generate the formatted agenda
             agenda_text = self._format_agenda(
                 meeting=meeting,
-                new_items=new_items,
+                recent_items=recent_items,
                 deadline_items=deadline_items,
-                active_projects=active_projects
+                ongoing_projects=ongoing_projects
             )
 
             # Get discussion prompts from Claude
             discussion_prompts = self._generate_discussion_prompts(
-                new_items=new_items,
+                recent_items=recent_items,
                 deadline_items=deadline_items,
-                active_projects=active_projects
+                ongoing_projects=ongoing_projects
             )
 
             # Add discussion prompts to agenda
             final_agenda = agenda_text + "\n\n" + discussion_prompts
 
             # Collect IDs for relations
-            item_ids = list(set([item.notion_id for item in new_items + deadline_items]))
-            project_ids = [project.notion_id for project in active_projects]
+            item_ids = list(set([item.notion_id for item in recent_items + deadline_items]))
+            project_ids = [project.notion_id for project in ongoing_projects]
 
             logger.info(f"Generated agenda: {len(final_agenda)} characters")
 
@@ -169,33 +166,46 @@ class AgendaGenerator:
             logger.error(f"Error querying deadline items: {e}", exc_info=True)
             return []
 
+    def _get_recent_items(self, limit: int = 5) -> List[NotionItem]:
+        """Get the most recent items by date received (for agenda prompting)."""
+        try:
+            sorts = [NotionQuerySort(property_name="Date Received", direction="descending")]
+
+            items = self.notion.query_items(filters=None, sorts=sorts, limit=limit)
+            logger.debug(f"Found {len(items)} recent items")
+            return items
+
+        except Exception as e:
+            logger.error(f"Error querying recent items: {e}", exc_info=True)
+            return []
+
     def _get_active_projects(self) -> List[NotionProject]:
-        """Get currently active projects."""
+        """Get all ongoing projects (not completed)."""
         try:
             filters = [
                 NotionQueryFilter(
                     property_name="Status",
                     property_type="select",
-                    condition="equals",
-                    value="active"
+                    condition="does_not_equal",
+                    value="completed"
                 )
             ]
             sorts = [NotionQuerySort(property_name="Priority", direction="descending")]
 
-            projects = self.notion.query_projects(filters=filters, sorts=sorts, limit=10)
-            logger.debug(f"Found {len(projects)} active projects")
+            projects = self.notion.query_projects(filters=filters, sorts=sorts, limit=20)
+            logger.debug(f"Found {len(projects)} ongoing projects")
             return projects
 
         except Exception as e:
-            logger.error(f"Error querying active projects: {e}", exc_info=True)
+            logger.error(f"Error querying ongoing projects: {e}", exc_info=True)
             return []
 
     def _format_agenda(
         self,
         meeting: NotionMeeting,
-        new_items: List[NotionItem],
+        recent_items: List[NotionItem],
         deadline_items: List[NotionItem],
-        active_projects: List[NotionProject]
+        ongoing_projects: List[NotionProject]
     ) -> str:
         """Format the agenda as markdown."""
         lines = []
@@ -217,59 +227,58 @@ class AgendaGenerator:
         lines.append(MEETING_INTRODUCTION)
         lines.append("\n---\n")
 
-        # Infrastructure & Consultations
-        lines.append("## INFRASTRUCTURE & CONSULTATIONS\n")
-
-        if new_items:
-            lines.append("### New Items Since Last Meeting:\n")
-            for item in new_items[:10]:  # Limit to 10 most recent
-                deadline_str = ""
-                if item.consultation_deadline:
-                    deadline_str = f" (Deadline: {item.consultation_deadline.strftime('%d %b %Y')})"
-
-                location_str = ""
-                if item.locations:
-                    location_str = f" - {', '.join(item.locations[:2])}"
-
-                lines.append(f"- **{item.title}**{location_str}{deadline_str}")
-                if item.summary:
-                    lines.append(f"  {item.summary[:200]}")
-                lines.append("")
-        else:
-            lines.append("_No new items since last meeting_\n")
-
-        if deadline_items:
-            lines.append("### Approaching Deadlines (Next 30 Days):\n")
-            for item in deadline_items:
-                deadline_str = item.consultation_deadline.strftime('%d %b %Y') if item.consultation_deadline else "TBD"
-                lines.append(f"- **{item.title}** - Deadline: {deadline_str}")
-                lines.append("")
-        else:
-            lines.append("_No approaching deadlines_\n")
-
-        lines.append("\n---\n")
-
-        # Current Campaigns & Projects
+        # Current Campaigns & Projects (MAIN FOCUS)
         lines.append("## CURRENT CAMPAIGNS & PROJECTS\n")
+        lines.append("_This is our main focus - what we're actively working on:_\n")
 
-        if active_projects:
-            for project in active_projects:
+        if ongoing_projects:
+            for project in ongoing_projects:
                 lines.append(f"### {project.title}\n")
                 if project.summary:
                     lines.append(f"{project.summary}\n")
                 if project.current_status:
                     lines.append(f"**Status:** {project.current_status}\n")
+                # Show status from Projects database
+                status_label = getattr(project, 'status', 'active')
+                lines.append(f"**Project Status:** {status_label}\n")
                 lines.append("")
         else:
-            lines.append("_No active projects_\n")
+            lines.append("_No ongoing projects - consider what we should be focusing on!_\n")
 
         lines.append("\n---\n")
 
-        # Recruitment & Volunteers
-        lines.append("## RECRUITMENT & VOLUNTEERS\n")
-        lines.append("- Committee members needed")
-        lines.append("- Recent interest from Google Groups members")
-        lines.append("- Outreach opportunities\n")
+        # Recent Items (for prompting discussion)
+        lines.append("## RECENT ITEMS FOR DISCUSSION\n")
+        lines.append("_Latest items received - review and delete items not needing discussion:_\n")
+
+        if recent_items:
+            for item in recent_items:
+                deadline_str = ""
+                if item.consultation_deadline:
+                    deadline_str = f" • Deadline: {item.consultation_deadline.strftime('%d %b %Y')}"
+
+                location_str = ""
+                if item.locations:
+                    location_str = f" • {', '.join(item.locations[:2])}"
+
+                received_str = ""
+                if item.date_received:
+                    received_str = f" • Received: {item.date_received.strftime('%d %b')}"
+
+                lines.append(f"- **{item.title}**{location_str}{deadline_str}{received_str}")
+                if item.summary:
+                    lines.append(f"  {item.summary[:200]}")
+                lines.append("")
+        else:
+            lines.append("_No recent items_\n")
+
+        # Approaching Deadlines (if any)
+        if deadline_items:
+            lines.append("\n### ⚠️ Approaching Deadlines (Next 30 Days):\n")
+            for item in deadline_items:
+                deadline_str = item.consultation_deadline.strftime('%d %b %Y') if item.consultation_deadline else "TBD"
+                lines.append(f"- **{item.title}** - Deadline: {deadline_str}")
+                lines.append("")
 
         lines.append("\n---\n")
 
@@ -281,23 +290,23 @@ class AgendaGenerator:
 
     def _generate_discussion_prompts(
         self,
-        new_items: List[NotionItem],
+        recent_items: List[NotionItem],
         deadline_items: List[NotionItem],
-        active_projects: List[NotionProject]
+        ongoing_projects: List[NotionProject]
     ) -> str:
         """Use Claude to generate discussion prompts and questions."""
         try:
-            # Build context for Claude
+            # Build context for Claude (emphasize projects as main focus)
             context_parts = []
 
-            if new_items:
-                context_parts.append("NEW ITEMS:")
-                for item in new_items[:5]:  # Top 5
-                    context_parts.append(f"- {item.title}")
-                    if item.summary:
-                        context_parts.append(f"  Summary: {item.summary[:200]}")
-                    if item.ai_key_points:
-                        context_parts.append(f"  Key points: {', '.join(item.ai_key_points[:3])}")
+            if ongoing_projects:
+                context_parts.append("CURRENT CAMPAIGNS & PROJECTS (MAIN FOCUS):")
+                for project in ongoing_projects:
+                    context_parts.append(f"- {project.title}")
+                    if project.summary:
+                        context_parts.append(f"  {project.summary[:200]}")
+                    if project.current_status:
+                        context_parts.append(f"  Current status: {project.current_status[:150]}")
 
             if deadline_items:
                 context_parts.append("\nUPCOMING DEADLINES:")
@@ -305,21 +314,23 @@ class AgendaGenerator:
                     deadline_str = item.consultation_deadline.strftime('%d %b %Y') if item.consultation_deadline else "TBD"
                     context_parts.append(f"- {item.title} (Deadline: {deadline_str})")
 
-            if active_projects:
-                context_parts.append("\nACTIVE PROJECTS:")
-                for project in active_projects[:3]:
-                    context_parts.append(f"- {project.title}")
-                    if project.summary:
-                        context_parts.append(f"  {project.summary[:150]}")
+            if recent_items:
+                context_parts.append("\nRECENT ITEMS:")
+                for item in recent_items[:3]:
+                    context_parts.append(f"- {item.title}")
+                    if item.summary:
+                        context_parts.append(f"  {item.summary[:150]}")
 
             context = "\n".join(context_parts)
 
             prompt = f"""You are helping generate discussion prompts for a Lambeth Cyclists committee meeting.
 
-Based on the items and projects below, generate:
-1. Key discussion questions for the group
-2. Specific actions that could be taken
-3. Points that need decisions
+The committee's MAIN FOCUS is the ongoing projects/campaigns. These are the strategic initiatives they're working on.
+
+Based on the projects and items below, generate:
+1. Discussion questions for each ongoing project (what's next? what decisions needed?)
+2. Actions the committee could take on recent items (respond to consultations, etc.)
+3. How recent items might relate to or inform ongoing projects
 
 Keep it concise and action-oriented. Focus on what the committee can do to advocate for better cycling conditions in Lambeth.
 
