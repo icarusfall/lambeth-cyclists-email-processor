@@ -64,16 +64,18 @@ class MeetingDetector:
         Find meetings that need agendas generated.
 
         Criteria:
-        - Meeting date is 1-2 days in the future
+        - Meeting date is within next 3 days
         - Agenda generation status is "pending" or empty
         - Meeting was manually created
         """
         try:
             now = datetime.now(timezone.utc)
-            window_start = now + timedelta(days=1)
-            window_end = now + timedelta(days=2)
+            # Look for meetings from now until 3 days out
+            # This catches meetings happening soon that need agendas
+            window_start = now
+            window_end = now + timedelta(days=3)
 
-            # Query for meetings in the 1-2 day window
+            # Query for meetings in the window
             filters = [
                 NotionQueryFilter(
                     property_name="Meeting Date",
