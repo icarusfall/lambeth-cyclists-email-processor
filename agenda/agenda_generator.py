@@ -233,14 +233,13 @@ class AgendaGenerator:
 
         if ongoing_projects:
             for project in ongoing_projects:
-                lines.append(f"### {project.title}\n")
-                if project.summary:
-                    lines.append(f"{project.summary}\n")
-                if project.current_status:
-                    lines.append(f"**Status:** {project.current_status}\n")
-                # Show status from Projects database
-                status_label = getattr(project, 'status', 'active')
-                lines.append(f"**Project Status:** {status_label}\n")
+                lines.append(f"### {project.project_name}\n")
+                if project.description:
+                    lines.append(f"{project.description}\n")
+                if project.status:
+                    lines.append(f"**Status:** {project.status}\n")
+                if project.next_action:
+                    lines.append(f"**Next Action:** {project.next_action}\n")
                 lines.append("")
         else:
             lines.append("_No ongoing projects - consider what we should be focusing on!_\n")
@@ -302,11 +301,11 @@ class AgendaGenerator:
             if ongoing_projects:
                 context_parts.append("CURRENT CAMPAIGNS & PROJECTS (MAIN FOCUS):")
                 for project in ongoing_projects:
-                    context_parts.append(f"- {project.title}")
-                    if project.summary:
-                        context_parts.append(f"  {project.summary[:200]}")
-                    if project.current_status:
-                        context_parts.append(f"  Current status: {project.current_status[:150]}")
+                    context_parts.append(f"- {project.project_name}")
+                    if project.description:
+                        context_parts.append(f"  {project.description[:200]}")
+                    if project.next_action:
+                        context_parts.append(f"  Next action: {project.next_action[:150]}")
 
             if deadline_items:
                 context_parts.append("\nUPCOMING DEADLINES:")
