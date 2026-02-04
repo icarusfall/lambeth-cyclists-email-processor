@@ -44,11 +44,9 @@ class Settings(BaseSettings):
     gmail_qpm: int = Field(default=250, env="GMAIL_QPM")
     notion_rpm: int = Field(default=3, env="NOTION_RPM")
 
-    # Email Alerts Configuration (optional)
-    smtp_host: str = Field(default="smtp.gmail.com", env="SMTP_HOST")
-    smtp_port: int = Field(default=587, env="SMTP_PORT")
-    smtp_username: Optional[str] = Field(default=None, env="SMTP_USERNAME")
-    smtp_password: Optional[str] = Field(default=None, env="SMTP_PASSWORD")
+    # Email Alerts Configuration (Resend API)
+    resend_api_key: Optional[str] = Field(default=None, env="RESEND_API_KEY")
+    from_email: str = Field(default="Lambeth Cyclists <onboarding@resend.dev>", env="FROM_EMAIL")
     alert_email: Optional[str] = Field(default=None, env="ALERT_EMAIL")
 
     # Error Monitoring (optional)

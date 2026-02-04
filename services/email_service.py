@@ -1,11 +1,9 @@
 """
 Email Service
-Sends email notifications and reminders using SMTP.
+Sends email notifications and reminders using Resend API.
 """
 
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import resend
 from datetime import datetime
 from typing import Optional
 
@@ -16,17 +14,19 @@ logger = get_logger(__name__)
 
 
 class EmailService:
-    """Service for sending email notifications via SMTP."""
+    """Service for sending email notifications via Resend API."""
 
     def __init__(self):
-        """Initialize email service with SMTP settings."""
+        """Initialize email service with Resend settings."""
         self.settings = get_settings()
 
-        # SMTP configuration
-        self.smtp_host = getattr(self.settings, 'smtp_host', 'smtp.gmail.com')
-        self.smtp_port = getattr(self.settings, 'smtp_port', 587)
-        self.smtp_username = getattr(self.settings, 'smtp_username', None)
-        self.smtp_password = getattr(self.settings, 'smtp_password', None)
+        # Resend configuration
+        self.api_key = getattr(self.settings, 'resend_api_key', None)
+        self.from_email = getattr(self.settings, 'from_email', 'Lambeth Cyclists <onboarding@resend.dev>')
+
+        # Configure Resend
+        if self.api_key:
+            resend.api_key = self.api_key
 
         # Alert email(s) - can be single email or comma-separated list
         alert_email_raw = getattr(self.settings, 'alert_email', self.settings.admin_email)
@@ -45,7 +45,7 @@ class EmailService:
         body_html: Optional[str] = None
     ) -> bool:
         """
-        Send an email using SMTP.
+        Send an email using Resend API.
 
         Args:
             to_email: Recipient email address (string) or list of addresses
@@ -56,41 +56,35 @@ class EmailService:
         Returns:
             True if sent successfully, False otherwise
         """
-        if not self.smtp_username or not self.smtp_password:
-            logger.warning("SMTP credentials not configured - skipping email")
+        if not self.api_key:
+            logger.warning("Resend API key not configured - skipping email")
             return False
 
         try:
             # Handle both single email and list of emails
             recipients = [to_email] if isinstance(to_email, str) else to_email
 
-            # Create message
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = self.smtp_username
-            msg['To'] = ', '.join(recipients)  # Multiple recipients separated by comma
+            # Build email params
+            params = {
+                "from": self.from_email,
+                "to": recipients,
+                "subject": subject,
+                "text": body_text,
+            }
 
-            # Add text part
-            text_part = MIMEText(body_text, 'plain')
-            msg.attach(text_part)
-
-            # Add HTML part if provided
+            # Add HTML if provided
             if body_html:
-                html_part = MIMEText(body_html, 'html')
-                msg.attach(html_part)
+                params["html"] = body_html
 
-            # Connect and send
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_username, self.smtp_password)
-                server.send_message(msg)
+            # Send via Resend
+            response = resend.Emails.send(params)
 
             recipients_str = ', '.join(recipients)
-            logger.info(f"Email sent successfully to {recipients_str}: {subject}")
+            logger.info(f"Email sent successfully to {recipients_str}: {subject} (id: {response.get('id', 'unknown')})")
             return True
 
         except Exception as e:
-            recipients_str = ', '.join(recipients)
+            recipients_str = ', '.join(recipients) if isinstance(to_email, list) else to_email
             logger.error(f"Failed to send email to {recipients_str}: {e}", exc_info=True)
             return False
 
@@ -132,7 +126,7 @@ Lambeth Cyclists Email Processor
 
     <p>The agenda will be auto-generated 2 days before the meeting.</p>
 
-    <p><a href="{meeting_url}">View meeting in Notion →</a></p>
+    <p><a href="{meeting_url}">View meeting in Notion</a></p>
 
     <hr>
     <p style="color: #666; font-size: 0.9em;">Lambeth Cyclists Email Processor</p>
@@ -193,12 +187,12 @@ Lambeth Cyclists Email Processor
 
     <p><strong>Please review and approve the agenda in Notion.</strong></p>
 
-    <p><a href="{meeting_url}" style="background-color: #0066cc; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Review Agenda →</a></p>
+    <p><a href="{meeting_url}" style="background-color: #0066cc; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Review Agenda</a></p>
 
     <h3>Agenda Preview:</h3>
     <pre style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow: auto; font-size: 0.9em;">{agenda_preview[:500]}...</pre>
 
-    <p style="color: #cc6600;"><strong>⚠️ Mark the agenda as "approved" when ready to send it out to attendees.</strong></p>
+    <p style="color: #cc6600;"><strong>Mark the agenda as "approved" when ready to send it out to attendees.</strong></p>
 
     <hr>
     <p style="color: #666; font-size: 0.9em;">Lambeth Cyclists Email Processor</p>
@@ -225,7 +219,7 @@ Lambeth Cyclists Email Processor
         subject = f"{urgency}Agenda Needs Approval: {meeting_title}"
 
         body_text = f"""
-⚠️ REMINDER: Agenda needs approval
+REMINDER: Agenda needs approval
 
 Meeting: {meeting_title}
 Date: {meeting_date.strftime('%A, %d %B %Y at %H:%M')}
@@ -246,7 +240,7 @@ Lambeth Cyclists Email Processor
 <html>
 <body style="font-family: Arial, sans-serif; line-height: 1.6;">
     <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px;">
-        <h2 style="margin-top: 0;">⚠️ REMINDER: Agenda Needs Approval</h2>
+        <h2 style="margin-top: 0;">REMINDER: Agenda Needs Approval</h2>
     </div>
 
     <ul>
@@ -257,7 +251,7 @@ Lambeth Cyclists Email Processor
 
     <p>The agenda has been generated but still needs your approval.</p>
 
-    <p><a href="{meeting_url}" style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Review & Approve Agenda →</a></p>
+    <p><a href="{meeting_url}" style="background-color: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Review & Approve Agenda</a></p>
 
     <p style="color: #666; font-size: 0.9em;">You will continue to receive daily reminders until the agenda is approved.</p>
 
@@ -301,7 +295,7 @@ Lambeth Cyclists Email Processor
         details_html = "\n".join([f"<li>{d}</li>" for d in details])
 
         body_text = f"""
-📅 REMINDER: Meeting Tomorrow
+REMINDER: Meeting Tomorrow
 
 {details_text}
 
@@ -318,14 +312,14 @@ Lambeth Cyclists Email Processor
 <html>
 <body style="font-family: Arial, sans-serif; line-height: 1.6;">
     <div style="background-color: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin-bottom: 20px;">
-        <h2 style="margin-top: 0;">📅 REMINDER: Meeting Tomorrow</h2>
+        <h2 style="margin-top: 0;">REMINDER: Meeting Tomorrow</h2>
     </div>
 
     <ul>
         {details_html}
     </ul>
 
-    <p><a href="{meeting_url}">View meeting details in Notion →</a></p>
+    <p><a href="{meeting_url}">View meeting details in Notion</a></p>
 
     <p><strong>See you tomorrow!</strong></p>
 
@@ -378,7 +372,7 @@ Lambeth Cyclists Email Processor
 
     <p>Please add the meeting minutes and notes to Notion:</p>
 
-    <p><a href="{meeting_url}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Add Minutes →</a></p>
+    <p><a href="{meeting_url}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Add Minutes</a></p>
 
     <h3>Don't forget to:</h3>
     <ul>
@@ -408,7 +402,7 @@ Lambeth Cyclists Email Processor
         context: Optional[str] = None
     ) -> bool:
         """Send alert when an error occurs."""
-        subject = f"⚠️ Error in Email Processor: {error_type}"
+        subject = f"Error in Email Processor: {error_type}"
 
         body_text = f"""
 An error occurred in the Lambeth Cyclists Email Processor:
@@ -428,7 +422,7 @@ Lambeth Cyclists Email Processor
 <html>
 <body style="font-family: Arial, sans-serif; line-height: 1.6;">
     <div style="background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin-bottom: 20px;">
-        <h2 style="margin-top: 0; color: #721c24;">⚠️ Error in Email Processor</h2>
+        <h2 style="margin-top: 0; color: #721c24;">Error in Email Processor</h2>
     </div>
 
     <ul>
@@ -457,7 +451,7 @@ Lambeth Cyclists Email Processor
         message: str
     ) -> bool:
         """Send system health alert (e.g., no emails processed in X days)."""
-        subject = "⚠️ System Health Alert: Email Processor"
+        subject = "System Health Alert: Email Processor"
 
         body_text = f"""
 System Health Alert:
@@ -480,7 +474,7 @@ Lambeth Cyclists Email Processor
 <html>
 <body style="font-family: Arial, sans-serif; line-height: 1.6;">
     <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px;">
-        <h2 style="margin-top: 0;">⚠️ System Health Alert</h2>
+        <h2 style="margin-top: 0;">System Health Alert</h2>
     </div>
 
     <p>{message}</p>
