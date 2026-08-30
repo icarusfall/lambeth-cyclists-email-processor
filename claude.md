@@ -166,7 +166,13 @@ Ordered roughly by how much pain they cause:
 3. **No shared config or library** across the three repos; conventions drift and
    have to be re-fixed in each.
 4. **The processor's Notion layer is a version behind** the other two repos.
-5. **Docs describe the January system.** Several guides in the processor repo
+5. **Secrets are named and valued inconsistently across the repos.** The
+   same Anthropic key is `CLAUDE_API_KEY` in the processor and
+   `ANTHROPIC_API_KEY` in the portal. The portal and the Vercel chat app
+   hold different `MCP_API_KEY` values — both valid, since the MCP server
+   accepts a list, but worth collapsing to one issued key per caller when
+   the repos merge.
+6. **Docs describe the January system.** Several guides in the processor repo
    still reference SMTP and a single-app architecture.
 
 ---
