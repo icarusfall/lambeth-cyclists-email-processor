@@ -75,7 +75,7 @@ Follow the **OAUTH_SETUP_GUIDE.md** to:
 1. Create a Google Cloud project
 2. Enable Gmail API and Google Drive API
 3. Create OAuth 2.0 credentials
-4. Run `python get_refresh_token.py` to get your refresh token
+4. Run `python scripts/get_refresh_token.py` to get your refresh token
 5. Create a Google Drive folder for attachments
 6. Copy the folder ID from the URL
 
@@ -167,7 +167,7 @@ If you see errors, check that:
 Let's verify all services can connect:
 
 ```python
-# Create a file called test_connections.py
+# Use the bundled scripts/check_connections.py
 
 from config.logging_config import setup_logging, get_logger
 from services.gmail_service import GmailService
@@ -226,7 +226,7 @@ print("="*60)
 
 Run it:
 ```bash
-python test_connections.py
+python scripts/check_connections.py
 ```
 
 **Expected result:** All services show ✓ (connected)
@@ -320,7 +320,7 @@ Now let's test the full pipeline with a real email:
 
 **Check:**
 - Client ID and Client Secret are correct
-- Refresh token is valid (re-run `get_refresh_token.py` if needed)
+- Refresh token is valid (re-run `scripts/get_refresh_token.py` if needed)
 - Gmail API is enabled in Google Cloud Console
 
 ### Error: "Notion API: Could not find database"
@@ -486,7 +486,7 @@ If you run into issues:
 3. **Check configuration**:
    - Run `python -c "from config.settings import validate_settings; validate_settings()"`
 4. **Test connections**:
-   - Run the `test_connections.py` script from Test 1
+   - Run the `scripts/check_connections.py` script from Test 1
 
 ---
 
@@ -516,7 +516,7 @@ Your checklist:
 4. [ ] Claude API key obtained
 5. [ ] `.env` file created with all credentials
 6. [ ] Configuration validated (`validate_settings()`)
-7. [ ] Test connections passed (`test_connections.py`)
+7. [ ] Test connections passed (`scripts/check_connections.py`)
 8. [ ] Test email sent with "Lambeth Cycling Projects" label
 9. [ ] Processor run successfully (`python main.py`)
 10. [ ] Notion Item created and verified

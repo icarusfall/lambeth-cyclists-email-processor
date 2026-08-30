@@ -24,6 +24,16 @@ from models.email_data import EmailAttachment
 
 logger = get_logger(__name__)
 
+# Sonnet 5 runs adaptive thinking by default, so responses lead with a thinking
+# block and sampling parameters (temperature/top_p/top_k) are rejected. Depth is
+# controlled per-call with output_config={"effort": ...} instead.
+MODEL = "claude-sonnet-5"
+
+
+def response_text_of(message: Message) -> str:
+    """Concatenate the text blocks of a response, skipping thinking blocks."""
+    return "".join(b.text for b in message.content if b.type == "text").strip()
+
 
 class ClaudeService:
     """
@@ -35,7 +45,7 @@ class ClaudeService:
         """Initialize Claude service with API credentials."""
         self.settings = get_settings()
         self.client = Anthropic(api_key=self.settings.claude_api_key)
-        self.model = "claude-sonnet-4-20250514"  # Use Sonnet 4 for better performance
+        self.model = MODEL
 
     def analyze_email_text(
         self,
@@ -62,8 +72,8 @@ class ClaudeService:
             logger.debug("Calling Claude API for text extraction")
             message = self.client.messages.create(
                 model=self.model,
-                max_tokens=2048,
-                temperature=0,  # Deterministic for structured extraction
+                max_tokens=8192,
+                output_config={"effort": "low"},
                 messages=[{
                     "role": "user",
                     "content": prompt
@@ -71,7 +81,7 @@ class ClaudeService:
             )
 
             # Extract response
-            response_text = message.content[0].text
+            response_text = response_text_of(message)
 
             # Parse JSON response
             extracted_data = self._parse_json_response(response_text)
@@ -142,7 +152,8 @@ class ClaudeService:
         logger.debug(f"Calling Claude vision API for {image.filename}")
         message = self.client.messages.create(
             model=self.model,
-            max_tokens=1024,
+            max_tokens=8192,
+            output_config={"effort": "medium"},
             messages=[{
                 "role": "user",
                 "content": [
@@ -162,7 +173,7 @@ class ClaudeService:
             }]
         )
 
-        return message.content[0].text
+        return response_text_of(message)
 
     def detect_related_items(
         self,
@@ -208,8 +219,8 @@ class ClaudeService:
             logger.debug("Calling Claude API for relationship detection")
             message = self.client.messages.create(
                 model=self.model,
-                max_tokens=1024,
-                temperature=0,
+                max_tokens=4096,
+                output_config={"effort": "low"},
                 messages=[{
                     "role": "user",
                     "content": prompt
@@ -217,7 +228,7 @@ class ClaudeService:
             )
 
             # Parse response
-            response_text = message.content[0].text
+            response_text = response_text_of(message)
             result = self._parse_json_response(response_text)
 
             related_items = result.get("related_item_ids", [])
@@ -258,15 +269,15 @@ class ClaudeService:
             logger.debug("Calling Claude API for discussion prompts")
             message = self.client.messages.create(
                 model=self.model,
-                max_tokens=1024,
-                temperature=0.3,  # Slightly creative for varied prompts
+                max_tokens=4096,
+                output_config={"effort": "medium"},
                 messages=[{
                     "role": "user",
                     "content": prompt
                 }]
             )
 
-            response_text = message.content[0].text
+            response_text = response_text_of(message)
             prompts = self._parse_json_response(response_text)
 
             logger.info(f"Generated discussion prompts for {len(prompts)} items")
@@ -310,15 +321,15 @@ class ClaudeService:
             logger.debug("Calling Claude API for agenda summary")
             message = self.client.messages.create(
                 model=self.model,
-                max_tokens=512,
-                temperature=0.5,  # Moderately creative for engaging summary
+                max_tokens=4096,
+                output_config={"effort": "low"},
                 messages=[{
                     "role": "user",
                     "content": prompt
                 }]
             )
 
-            summary = message.content[0].text.strip()
+            summary = response_text_of(message)
 
             logger.info("Generated meeting agenda summary")
 

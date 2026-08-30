@@ -182,7 +182,7 @@ def test_mark_as_processed_adds_label(gmail_service):
     }
 
     # Mock modify response
-    gmail_service.service.users().messages().modify().execute.return_value = {}
+    gmail_service.service.users().messages().modify.return_value.execute.return_value = {}
 
     # Mark as processed
     gmail_service.mark_as_processed('msg_123')
@@ -214,7 +214,7 @@ def test_get_or_create_label_creates_new(gmail_service):
     }
 
     # Mock label create response
-    gmail_service.service.users().labels().create().execute.return_value = {
+    gmail_service.service.users().labels().create.return_value.execute.return_value = {
         'id': 'Label_new',
         'name': 'new_label'
     }

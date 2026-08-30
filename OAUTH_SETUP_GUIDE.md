@@ -124,7 +124,7 @@ Now you need to authorize the app and get a refresh token. There are two methods
 
 ### Method A: Using Python Script (Recommended)
 
-1. Create a file called `get_refresh_token.py` in your project root:
+1. Create a file called `scripts/get_refresh_token.py` in your project root:
 
 ```python
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -184,7 +184,7 @@ if __name__ == '__main__':
 
 2. Run the script:
    ```bash
-   python get_refresh_token.py
+   python scripts/get_refresh_token.py
    ```
 
 3. **A browser window will open**:
@@ -319,7 +319,7 @@ else:
 
 **Solution**:
 1. Delete `token.json` if it exists
-2. Run `get_refresh_token.py` again to get a new refresh token
+2. Run `scripts/get_refresh_token.py` again to get a new refresh token
 3. Update `.env` with the new refresh token
 
 ### Error: "redirect_uri_mismatch"
@@ -360,7 +360,7 @@ else:
 
 **Solution**:
 1. Check that all required scopes are added in OAuth consent screen
-2. Re-run `get_refresh_token.py` to re-grant permissions
+2. Re-run `scripts/get_refresh_token.py` to re-grant permissions
 3. Make sure you click "Allow" for all permissions in the OAuth flow
 
 ---
@@ -383,7 +383,7 @@ else:
 - [ ] Enabled Geocoding API (optional)
 - [ ] Configured OAuth consent screen
 - [ ] Created OAuth client ID (Desktop app)
-- [ ] Obtained refresh token using `get_refresh_token.py`
+- [ ] Obtained refresh token using `scripts/get_refresh_token.py`
 - [ ] Created Google Drive folder for attachments
 - [ ] Updated `.env` with all credentials
 - [ ] Tested Gmail authentication

@@ -5,7 +5,7 @@ Loads environment variables and provides validation.
 
 import os
 from typing import Optional
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, field_validator
 
 
@@ -69,10 +69,14 @@ class Settings(BaseSettings):
             raise ValueError("Interval must be positive")
         return v
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        # Tolerate leftover keys in .env (e.g. the SMTP_* vars superseded by
+        # Resend) instead of refusing to start. Matches the portal's config.
+        extra="ignore",
+    )
 
 
 # Global settings instance

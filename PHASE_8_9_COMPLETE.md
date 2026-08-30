@@ -298,10 +298,10 @@ You could also:
 python main.py
 
 # Test email alerts
-python test_email_alerts.py
+python scripts/check_email_alerts.py
 
 # Test connections
-python test_connections.py
+python scripts/check_connections.py
 ```
 
 **Key Configuration:**

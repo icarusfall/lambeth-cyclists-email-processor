@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Tuple
 
 from config.logging_config import get_logger
-from services.claude_service import ClaudeService
+from services.claude_service import ClaudeService, response_text_of
 from services.notion_service import NotionService
 from models.notion_schemas import NotionMeeting, NotionItem, NotionProject, NotionQueryFilter, NotionQuerySort
 
@@ -340,15 +340,15 @@ Generate 3-5 discussion prompts in markdown format."""
             # Call Claude
             message = self.claude.client.messages.create(
                 model=self.claude.model,
-                max_tokens=800,
-                temperature=0.7,
+                max_tokens=4096,
+                output_config={"effort": "medium"},
                 messages=[{
                     "role": "user",
                     "content": prompt
                 }]
             )
 
-            response_text = message.content[0].text
+            response_text = response_text_of(message)
 
             return f"## DISCUSSION PROMPTS (AI-Generated)\n\n{response_text}"
 

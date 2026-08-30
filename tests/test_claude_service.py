@@ -8,6 +8,18 @@ from unittest.mock import Mock, patch, MagicMock
 import json
 
 from services.claude_service import ClaudeService
+
+
+def _thinking_block():
+    """Sonnet 5 runs adaptive thinking, so responses lead with a thinking block.
+
+    Fixtures include one so the tests exercise the real response shape: callers
+    must select text blocks by type, never by content[0].
+    """
+    block = Mock()
+    block.type = "thinking"
+    block.thinking = ""
+    return block
 from models.email_data import EmailAttachment
 
 
@@ -50,7 +62,8 @@ def sample_claude_response(sample_extracted_data):
     mock_message = Mock()
     mock_content = Mock()
     mock_content.text = json.dumps(sample_extracted_data)
-    mock_message.content = [mock_content]
+    mock_content.type = "text"
+    mock_message.content = [_thinking_block(), mock_content]
     return mock_message
 
 
@@ -81,7 +94,8 @@ def test_analyze_email_text_with_markdown_json(claude_service):
     mock_message = Mock()
     mock_content = Mock()
     mock_content.text = "```json\n{\"title\": \"Test\", \"summary\": \"Test summary\"}\n```"
-    mock_message.content = [mock_content]
+    mock_content.type = "text"
+    mock_message.content = [_thinking_block(), mock_content]
     claude_service.client.messages.create.return_value = mock_message
 
     # Analyze email
@@ -128,7 +142,8 @@ def test_analyze_images(claude_service, tmp_path):
     mock_message = Mock()
     mock_content = Mock()
     mock_content.text = "This image shows a proposed cycle lane on Test Street."
-    mock_message.content = [mock_content]
+    mock_content.type = "text"
+    mock_message.content = [_thinking_block(), mock_content]
     claude_service.client.messages.create.return_value = mock_message
 
     # Analyze images
@@ -172,7 +187,8 @@ def test_detect_related_items(claude_service):
         "project_match_confidence": "high",
         "project_match_reason": "Same street"
     })
-    mock_message.content = [mock_content]
+    mock_content.type = "text"
+    mock_message.content = [_thinking_block(), mock_content]
     claude_service.client.messages.create.return_value = mock_message
 
     # Detect relationships
@@ -203,7 +219,8 @@ def test_detect_related_items_low_confidence(claude_service):
         "project_match_confidence": "low",
         "project_match_reason": "Different location"
     })
-    mock_message.content = [mock_content]
+    mock_content.type = "text"
+    mock_message.content = [_thinking_block(), mock_content]
     claude_service.client.messages.create.return_value = mock_message
 
     # Detect relationships
@@ -240,7 +257,8 @@ def test_generate_discussion_prompts(claude_service):
             "Should we coordinate with local BID?"
         ]
     })
-    mock_message.content = [mock_content]
+    mock_content.type = "text"
+    mock_message.content = [_thinking_block(), mock_content]
     claude_service.client.messages.create.return_value = mock_message
 
     # Generate prompts
@@ -264,7 +282,8 @@ def test_generate_agenda_summary(claude_service):
     mock_message = Mock()
     mock_content = Mock()
     mock_content.text = "Since our last meeting, we've received 10 new items including several urgent consultations. This meeting will focus on prioritizing responses."
-    mock_message.content = [mock_content]
+    mock_content.type = "text"
+    mock_message.content = [_thinking_block(), mock_content]
     claude_service.client.messages.create.return_value = mock_message
 
     # Generate summary

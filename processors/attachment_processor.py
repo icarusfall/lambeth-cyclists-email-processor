@@ -58,6 +58,12 @@ class AttachmentProcessor:
                     text = self.extract_pdf_text(attachment)
                     if text:
                         combined_text.append(f"### {attachment.filename}\n\n{text}")
+                    else:
+                        # The extractors swallow their own errors and return None, so
+                        # flag the failure here rather than dropping the attachment
+                        # silently. Also catches scans with no text layer.
+                        unsupported.append(attachment.filename)
+                        logger.warning(f"No text extracted from PDF: {attachment.filename}")
 
                 elif attachment.mime_type in [
                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",  # .docx
@@ -66,6 +72,9 @@ class AttachmentProcessor:
                     text = self.extract_word_text(attachment)
                     if text:
                         combined_text.append(f"### {attachment.filename}\n\n{text}")
+                    else:
+                        unsupported.append(attachment.filename)
+                        logger.warning(f"No text extracted from document: {attachment.filename}")
 
                 elif attachment.mime_type in [
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",  # .xlsx
@@ -75,6 +84,9 @@ class AttachmentProcessor:
                     text = self.extract_excel_text(attachment)
                     if text:
                         combined_text.append(f"### {attachment.filename}\n\n{text}")
+                    else:
+                        unsupported.append(attachment.filename)
+                        logger.warning(f"No text extracted from spreadsheet: {attachment.filename}")
 
                 elif attachment.mime_type.startswith("image/"):
                     # Images go to vision API, not text extraction
