@@ -11,11 +11,9 @@ google-api-python-client==2.199.0
 anthropic>=1,<2
 
 # Notion API
-# PINNED BELOW 3.0 DELIBERATELY. notion-client v3 replaces databases.query()
-# with the data_sources API; services/notion_service.py still uses the v2
-# surface. Bumping this is a code migration, not a version bump.
-# (The MCP server repo is already on v3.)
-notion-client>=2.2,<3
+# v3: notion_service.py addresses data sources (data_sources.query, and pages
+# parented to a data source) rather than databases. Matches the portal.
+notion-client>=3,<4
 
 # HTTP requests
 requests==2.34.2

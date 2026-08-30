@@ -29,6 +29,14 @@ def notion_service():
         service = NotionService()
         service.client = Mock()  # Mock Notion client
 
+        # v3 resolves a database's data source before querying it or parenting
+        # a page to it, so the mock has to answer databases.retrieve with the
+        # real shape. Each db id maps to a distinct data source id, which lets
+        # the tests assert that pages land in the right one.
+        service.client.databases.retrieve.side_effect = lambda database_id: {
+            "data_sources": [{"id": f"ds_of_{database_id}"}]
+        }
+
         yield service
 
 
@@ -125,7 +133,7 @@ def test_parse_item_response(notion_service, sample_notion_item_response):
 def test_query_items(notion_service):
     """Test querying items database."""
     # Mock Notion API response
-    notion_service.client.databases.query.return_value = {
+    notion_service.client.data_sources.query.return_value = {
         "results": [
             {
                 "id": "page_1",
@@ -155,7 +163,7 @@ def test_query_items(notion_service):
 def test_check_duplicate_by_message_id(notion_service, sample_notion_item_response):
     """Test checking for duplicate by Gmail message ID."""
     # Mock query response
-    notion_service.client.databases.query.return_value = {
+    notion_service.client.data_sources.query.return_value = {
         "results": [sample_notion_item_response]
     }
 
@@ -170,7 +178,7 @@ def test_check_duplicate_by_message_id(notion_service, sample_notion_item_respon
 def test_check_duplicate_returns_none_when_not_found(notion_service):
     """Test that check_duplicate returns None when no duplicate found."""
     # Mock empty query response
-    notion_service.client.databases.query.return_value = {
+    notion_service.client.data_sources.query.return_value = {
         "results": []
     }
 

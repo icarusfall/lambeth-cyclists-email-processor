@@ -38,6 +38,24 @@ class NotionService:
         self.projects_db_id = self.settings.notion_projects_db_id
         self.meetings_db_id = self.settings.notion_meetings_db_id
 
+        self._ds_cache: Dict[str, str] = {}
+
+    def ds_id_for(self, db_id: str) -> str:
+        """Resolve (and cache) a database's data source id.
+
+        notion-client v3 addresses data sources rather than databases: queries
+        go to data_sources.query() and new pages are parented to a data source.
+        A database's id is stable, so the lookup is cached for the process.
+        """
+        if db_id not in self._ds_cache:
+            db = self.client.databases.retrieve(database_id=db_id)
+            self._ds_cache[db_id] = db["data_sources"][0]["id"]
+        return self._ds_cache[db_id]
+
+    def _data_source_parent(self, db_id: str) -> Dict[str, str]:
+        """Parent block for creating a page in a database, v3 style."""
+        return {"type": "data_source_id", "data_source_id": self.ds_id_for(db_id)}
+
     # === ITEM OPERATIONS ===
 
     def create_item(self, item_data: NotionItemCreate) -> NotionItem:
@@ -54,7 +72,7 @@ class NotionService:
             properties = self._build_item_properties(item_data)
 
             response = self.client.pages.create(
-                parent={"database_id": self.items_db_id},
+                parent=self._data_source_parent(self.items_db_id),
                 properties=properties
             )
 
@@ -194,14 +212,14 @@ class NotionService:
             List of NotionItem objects
         """
         try:
-            query_params = {"database_id": self.items_db_id, "page_size": min(limit, 100)}
+            query_params = {"data_source_id": self.ds_id_for(self.items_db_id), "page_size": min(limit, 100)}
 
             if filters:
                 query_params["filter"] = self._build_filter(filters)
             if sorts:
                 query_params["sorts"] = [{"property": s.property_name, "direction": s.direction} for s in sorts]
 
-            response = self.client.databases.query(**query_params)
+            response = self.client.data_sources.query(**query_params)
 
             items = [self._parse_item_response(page) for page in response["results"]]
 
@@ -253,7 +271,7 @@ class NotionService:
             properties = self._build_project_properties(project_data)
 
             response = self.client.pages.create(
-                parent={"database_id": self.projects_db_id},
+                parent=self._data_source_parent(self.projects_db_id),
                 properties=properties
             )
 
@@ -348,14 +366,14 @@ class NotionService:
     ) -> List[NotionProject]:
         """Query Projects database."""
         try:
-            query_params = {"database_id": self.projects_db_id, "page_size": min(limit, 100)}
+            query_params = {"data_source_id": self.ds_id_for(self.projects_db_id), "page_size": min(limit, 100)}
 
             if filters:
                 query_params["filter"] = self._build_filter(filters)
             if sorts:
                 query_params["sorts"] = [{"property": s.property_name, "direction": s.direction} for s in sorts]
 
-            response = self.client.databases.query(**query_params)
+            response = self.client.data_sources.query(**query_params)
 
             projects = [self._parse_project_response(page) for page in response["results"]]
 
@@ -378,7 +396,7 @@ class NotionService:
             properties = self._build_meeting_properties(meeting_data)
 
             response = self.client.pages.create(
-                parent={"database_id": self.meetings_db_id},
+                parent=self._data_source_parent(self.meetings_db_id),
                 properties=properties
             )
 
@@ -508,14 +526,14 @@ class NotionService:
     ) -> List[NotionMeeting]:
         """Query Meetings database."""
         try:
-            query_params = {"database_id": self.meetings_db_id, "page_size": min(limit, 100)}
+            query_params = {"data_source_id": self.ds_id_for(self.meetings_db_id), "page_size": min(limit, 100)}
 
             if filters:
                 query_params["filter"] = self._build_filter(filters)
             if sorts:
                 query_params["sorts"] = [{"property": s.property_name, "direction": s.direction} for s in sorts]
 
-            response = self.client.databases.query(**query_params)
+            response = self.client.data_sources.query(**query_params)
 
             meetings = [self._parse_meeting_response(page) for page in response["results"]]
 
